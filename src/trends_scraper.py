@@ -8,7 +8,14 @@ class TrendsScraper:
     
     def __init__(self):
         """Initialize the TrendReq client."""
-        self.pytrends = TrendReq(hl='en-US', tz=360, timeout=(10, 25), retries=2, backoff_factor=0.1)
+        self.pytrends = TrendReq(
+            hl='en-US',
+            tz=360,
+            timeout=(10,25),
+            retries=2,
+            backoff_factor=0.1,
+            requests_args={'verify': True}
+        )
     
     def get_interest_over_time(self, keywords, timeframe="now 7-d", geo=""):
         """
