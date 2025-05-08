@@ -1,57 +1,53 @@
+from pytrends.request import TrendReq
 import pandas as pd
-import requests
-from datetime import datetime, timedelta
 import time
 import random
-from bs4 import BeautifulSoup
 
 class TrendsScraper:
-    """Class for fetching Google Trends data."""
+    """Class for fetching real Google Trends data using specific URL format."""
     
     def __init__(self):
-        """Initialize the scraper."""
-        self.base_url = "https://trends.google.com/trends/explore"
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        })
+        """Initialize the TrendReq client with US locale."""
+        self.pytrends = TrendReq(
+            hl='en-US',
+            tz=360,
+            timeout=(10,25),
+            retries=2,
+            backoff_factor=0.1
+        )
     
     def get_interest_over_time(self, keywords, timeframe="now 7-d", geo="US"):
         """
-        Get interest over time data for specified keywords.
+        Get interest over time data using format: trends.google.com/trends/explore?geo=US&q=keywords
         
         Args:
             keywords (list): List of keywords to get data for
             timeframe (str): Time frame to retrieve data
-            geo (str): Geographic location (defaults to US)
+            geo (str): Geographic location (always US)
             
         Returns:
             pandas.DataFrame: DataFrame containing interest over time data
         """
         try:
-            # For demonstration purposes, generate sample data
-            # In production, you would parse the actual response from Google Trends
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=7)
-            dates = pd.date_range(start=start_date, end=end_date, freq='D')
-            
-            df = pd.DataFrame(index=dates)
-            
             if isinstance(keywords, str):
-                keywords = [keywords]
+                # Convert comma-separated string to list
+                keywords = [k.strip() for k in keywords.split(',')]
             
-            for keyword in keywords:
-                # Generate realistic-looking trend data
-                base_value = 65  # Living room typically has moderate-high interest
-                values = []
-                for _ in range(len(dates)):
-                    # Add some natural variation
-                    daily_value = base_value + random.randint(-15, 15)
-                    # Ensure values stay within 0-100 range
-                    daily_value = max(0, min(100, daily_value))
-                    values.append(daily_value)
-                
-                df[keyword] = values
+            # Ensure geo is always US to match the URL format
+            geo = "US"
+            
+            # Build the payload
+            self.pytrends.build_payload(keywords, cat=0, timeframe=timeframe, geo=geo)
+            
+            # Add a small delay to avoid rate limiting
+            time.sleep(random.uniform(1, 2))
+            
+            # Get the interest over time data
+            df = self.pytrends.interest_over_time()
+            
+            # Drop isPartial column if it exists
+            if 'isPartial' in df.columns:
+                df = df.drop('isPartial', axis=1)
             
             return df
             
@@ -61,132 +57,111 @@ class TrendsScraper:
     
     def get_related_topics(self, keywords, timeframe="now 7-d", geo="US"):
         """
-        Get related topics for specified keywords.
+        Get related topics using format: trends.google.com/trends/explore?geo=US&q=keywords
         
         Args:
             keywords (list): List of keywords to get data for
             timeframe (str): Time frame to retrieve data
-            geo (str): Geographic location (defaults to US)
+            geo (str): Geographic location (always US)
             
         Returns:
             dict: Dictionary containing related topics data for each keyword
         """
-        # Sample related topics for "living room"
-        sample_topics = {
-            'living room': {
-                'rising': pd.DataFrame({
-                    'topic_title': [
-                        'Modern living room',
-                        'Living room furniture',
-                        'Living room decor',
-                        'Small living room',
-                        'Living room design'
-                    ],
-                    'value': [
-                        'Breakout',
-                        '+250%',
-                        '+180%',
-                        '+150%',
-                        '+120%'
-                    ]
-                }),
-                'top': pd.DataFrame({
-                    'topic_title': [
-                        'Living room furniture',
-                        'Living room decor',
-                        'Modern living room',
-                        'Small living room ideas',
-                        'Living room design'
-                    ],
-                    'value': [
-                        100,
-                        95,
-                        80,
-                        75,
-                        70
-                    ]
-                })
-            }
-        }
+        related_topics = {}
         
-        return sample_topics
+        if isinstance(keywords, str):
+            keywords = [k.strip() for k in keywords.split(',')]
+        
+        # Ensure geo is always US
+        geo = "US"
+        
+        for keyword in keywords:
+            try:
+                # Build the payload
+                self.pytrends.build_payload([keyword], cat=0, timeframe=timeframe, geo=geo)
+                
+                # Add a small delay to avoid rate limiting
+                time.sleep(random.uniform(1, 2))
+                
+                # Get related topics
+                topics = self.pytrends.related_topics()
+                related_topics[keyword] = topics.get(keyword, {})
+                
+            except Exception as e:
+                print(f"Error fetching related topics for {keyword}: {str(e)}")
+                related_topics[keyword] = {}
+        
+        return related_topics
     
     def get_related_queries(self, keywords, timeframe="now 7-d", geo="US"):
         """
-        Get related queries for specified keywords.
+        Get related queries using format: trends.google.com/trends/explore?geo=US&q=keywords
         
         Args:
             keywords (list): List of keywords to get data for
             timeframe (str): Time frame to retrieve data
-            geo (str): Geographic location (defaults to US)
+            geo (str): Geographic location (always US)
             
         Returns:
             dict: Dictionary containing related queries data for each keyword
         """
-        # Sample related queries for "living room"
-        sample_queries = {
-            'living room': {
-                'rising': pd.DataFrame({
-                    'query': [
-                        'living room ideas 2024',
-                        'modern farmhouse living room',
-                        'coastal living room',
-                        'living room paint colors',
-                        'living room curtains'
-                    ],
-                    'value': [
-                        'Breakout',
-                        '+200%',
-                        '+180%',
-                        '+150%',
-                        '+130%'
-                    ]
-                }),
-                'top': pd.DataFrame({
-                    'query': [
-                        'living room ideas',
-                        'small living room ideas',
-                        'modern living room',
-                        'living room furniture',
-                        'living room decor'
-                    ],
-                    'value': [
-                        100,
-                        90,
-                        85,
-                        80,
-                        75
-                    ]
-                })
-            }
-        }
+        related_queries = {}
         
-        return sample_queries
+        if isinstance(keywords, str):
+            keywords = [k.strip() for k in keywords.split(',')]
+        
+        # Ensure geo is always US
+        geo = "US"
+        
+        for keyword in keywords:
+            try:
+                # Build the payload
+                self.pytrends.build_payload([keyword], cat=0, timeframe=timeframe, geo=geo)
+                
+                # Add a small delay to avoid rate limiting
+                time.sleep(random.uniform(1, 2))
+                
+                # Get related queries
+                queries = self.pytrends.related_queries()
+                related_queries[keyword] = queries.get(keyword, {})
+                
+            except Exception as e:
+                print(f"Error fetching related queries for {keyword}: {str(e)}")
+                related_queries[keyword] = {}
+        
+        return related_queries
     
-    def get_interest_by_region(self, keywords, timeframe="now 7-d", geo="US", resolution="COUNTRY"):
+    def get_interest_by_region(self, keywords, timeframe="now 7-d", geo="US", resolution="REGION"):
         """
-        Get interest by region for specified keywords.
+        Get interest by region using format: trends.google.com/trends/explore?geo=US&q=keywords
         
         Args:
             keywords (list): List of keywords to get data for
             timeframe (str): Time frame to retrieve data
-            geo (str): Geographic location (defaults to US)
+            geo (str): Geographic location (always US)
             resolution (str): Resolution of the data (COUNTRY, REGION, CITY, DMA)
             
         Returns:
             pandas.DataFrame: DataFrame containing interest by region data
         """
-        # Sample regional data for US states
-        states = [
-            'California', 'Texas', 'Florida', 'New York', 'Illinois',
-            'Pennsylvania', 'Ohio', 'Georgia', 'North Carolina', 'Michigan'
-        ]
-        
-        values = [random.randint(60, 100) for _ in states]
-        
-        df = pd.DataFrame({
-            'region': states,
-            'interest': values
-        }).set_index('region')
-        
-        return df
+        try:
+            if isinstance(keywords, str):
+                keywords = [k.strip() for k in keywords.split(',')]
+            
+            # Ensure geo is always US
+            geo = "US"
+            
+            # Build the payload
+            self.pytrends.build_payload(keywords, cat=0, timeframe=timeframe, geo=geo)
+            
+            # Add a small delay to avoid rate limiting
+            time.sleep(random.uniform(1, 2))
+            
+            # Get interest by region
+            df = self.pytrends.interest_by_region(resolution=resolution, inc_low_vol=True)
+            
+            return df
+            
+        except Exception as e:
+            print(f"Error fetching regional data: {str(e)}")
+            return pd.DataFrame()
