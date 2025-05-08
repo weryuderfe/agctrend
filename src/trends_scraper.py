@@ -14,7 +14,7 @@ class TrendsScraper:
         load_dotenv()
         
         # Configure Gemini AI
-        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+        genai.configure(api_key=os.getenv('AIzaSyD1__JEgLK80EVitxdsz2s8_rfbkrbO_WE'))
         self.model = genai.GenerativeModel('gemini-pro')
         
         # Default prompt template
