@@ -5,16 +5,15 @@ from src.utils import load_css, get_plotly_chart
 import pandas as pd
 
 def main():
-    # Load custom CSS
-    load_css()
-    
-    # Page configuration
+    # Page configuration must be the first Streamlit command
     st.set_page_config(
         page_title="Trends to Articles Generator",
         page_icon="📈",
-        layout="wide",
-        initial_sidebar_state="expanded"
+        layout="wide"
     )
+    
+    # Load custom CSS
+    load_css()
     
     # Header
     st.title("Google Trends Article Generator")
