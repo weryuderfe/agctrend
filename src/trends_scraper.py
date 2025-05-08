@@ -15,7 +15,7 @@ class TrendsScraper:
         
         # Configure Gemini AI
         genai.configure(api_key=os.getenv('AIzaSyD1__JEgLK80EVitxdsz2s8_rfbkrbO_WE'))
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Default prompt template
         self.prompt_template = """
